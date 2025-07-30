@@ -1,4 +1,4 @@
-module squirrel
+module github.com/utopiosphe/squirrel
 
 go 1.23.3
 
