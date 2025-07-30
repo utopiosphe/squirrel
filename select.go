@@ -272,7 +272,8 @@ func (b SelectBuilder) RemoveColumns() SelectBuilder {
 // Column adds a result column to the query.
 // Unlike Columns, Column accepts args which will be bound to placeholders in
 // the columns string, for example:
-//   Column("IF(col IN ("+squirrel.Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
+//
+//	Column("IF(col IN ("+squirrel.Placeholders(3)+"), 1, 0) as col", 1, 2, 3)
 func (b SelectBuilder) Column(column interface{}, args ...interface{}) SelectBuilder {
 	return builder.Append(b, "Columns", newPart(column, args...)).(SelectBuilder)
 }
@@ -400,4 +401,18 @@ func (b SelectBuilder) Suffix(sql string, args ...interface{}) SelectBuilder {
 // SuffixExpr adds an expression to the end of the query
 func (b SelectBuilder) SuffixExpr(expr Sqlizer) SelectBuilder {
 	return builder.Append(b, "Suffixes", expr).(SelectBuilder)
+}
+
+// GetSelectColumns returns the column names as strings from the SELECT clause.
+func (b SelectBuilder) GetSelectColumns() []string {
+	data := builder.GetStruct(b).(selectData)
+	columns := make([]string, 0, len(data.Columns))
+
+	for _, col := range data.Columns {
+		if sql, _, err := col.ToSql(); err == nil && sql != "" {
+			columns = append(columns, sql)
+		}
+	}
+
+	return columns
 }

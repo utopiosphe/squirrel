@@ -461,3 +461,11 @@ func TestRemoveColumns(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "SELECT name FROM users", sql)
 }
+
+func TestGetSelectColumns(t *testing.T) {
+	query := Select("id").
+		From("users").
+		Columns("name")
+	columns := query.GetSelectColumns()
+	assert.Equal(t, []string{"id", "name"}, columns)
+}
