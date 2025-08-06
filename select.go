@@ -272,6 +272,7 @@ func (b SelectBuilder) RemoveColumns() SelectBuilder {
 // ReduceColumns removes specified columns from the query.
 // It filters out columns that match the provided column names.
 // Column names are matched exactly (case-sensitive).
+// Supports both individual column names and comma-separated column lists.
 func (b SelectBuilder) ReduceColumns(cols ...string) SelectBuilder {
 	if len(cols) == 0 {
 		return b
@@ -279,15 +280,44 @@ func (b SelectBuilder) ReduceColumns(cols ...string) SelectBuilder {
 
 	data := builder.GetStruct(b).(selectData)
 	toRemove := make(map[string]bool)
+
+	// 解析要删除的列名，支持逗号分隔的形式
 	for _, col := range cols {
-		toRemove[col] = true
+		// 分割逗号分隔的列名
+		columnNames := strings.Split(col, ",")
+		for _, columnName := range columnNames {
+			// 去除空格
+			columnName = strings.TrimSpace(columnName)
+			if columnName != "" {
+				toRemove[columnName] = true
+			}
+		}
 	}
 
 	var newColumns []Sqlizer
 	for _, col := range data.Columns {
 		if sql, _, err := col.ToSql(); err == nil && sql != "" {
-			if !toRemove[sql] {
-				newColumns = append(newColumns, col)
+			// 检查当前列是否包含逗号分隔的多个列
+			if strings.Contains(sql, ",") {
+				// 分割当前列的SQL
+				columnParts := strings.Split(sql, ",")
+				var remainingParts []string
+				for _, part := range columnParts {
+					part = strings.TrimSpace(part)
+					if part != "" && !toRemove[part] {
+						remainingParts = append(remainingParts, part)
+					}
+				}
+				// 如果还有剩余的列，重新组合
+				if len(remainingParts) > 0 {
+					newSql := strings.Join(remainingParts, ", ")
+					newColumns = append(newColumns, newPart(newSql))
+				}
+			} else {
+				// 单个列的情况
+				if !toRemove[sql] {
+					newColumns = append(newColumns, col)
+				}
 			}
 		}
 	}
