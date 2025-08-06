@@ -269,6 +269,32 @@ func (b SelectBuilder) RemoveColumns() SelectBuilder {
 	return builder.Delete(b, "Columns").(SelectBuilder)
 }
 
+// ReduceColumns removes specified columns from the query.
+// It filters out columns that match the provided column names.
+// Column names are matched exactly (case-sensitive).
+func (b SelectBuilder) ReduceColumns(cols ...string) SelectBuilder {
+	if len(cols) == 0 {
+		return b
+	}
+
+	data := builder.GetStruct(b).(selectData)
+	toRemove := make(map[string]bool)
+	for _, col := range cols {
+		toRemove[col] = true
+	}
+
+	var newColumns []Sqlizer
+	for _, col := range data.Columns {
+		if sql, _, err := col.ToSql(); err == nil && sql != "" {
+			if !toRemove[sql] {
+				newColumns = append(newColumns, col)
+			}
+		}
+	}
+
+	return builder.Set(b, "Columns", newColumns).(SelectBuilder)
+}
+
 // Column adds a result column to the query.
 // Unlike Columns, Column accepts args which will be bound to placeholders in
 // the columns string, for example:
